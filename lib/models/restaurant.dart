@@ -1,4 +1,3 @@
-
 class Restaurant {
   final String id;
   final String name;
@@ -25,7 +24,6 @@ class Restaurant {
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
-    // Rating can be int or double in JSON; ensure double.
     double ratingDouble;
     final r = json['rating'];
     if (r is int) {
@@ -43,7 +41,9 @@ class Restaurant {
       try {
         cats = List.from(json['categories']).map((c) =>
             c is Map ? (c['name'] ?? '').toString() : c.toString()).toList();
-      } catch (_) { cats = []; }
+      } catch (_) {
+        cats = [];
+      }
     }
 
     return Restaurant(
@@ -56,31 +56,39 @@ class Restaurant {
       description: json['description'] ?? '',
       categories: cats,
       menus: json['menus'],
-      customerReviews: json['customerReviews'] != null ? List.from(json['customerReviews']) : null,
+      customerReviews: json['customerReviews'] != null
+          ? List.from(json['customerReviews'])
+          : null,
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'name': name,
-    'city': city,
-    'address': address,
-    'rating': rating,
-    'pictureId': pictureId,
-    'description': description,
-    'categories': categories.join(','),
-  };
+        'id': id,
+        'name': name,
+        'city': city,
+        'address': address,
+        'rating': rating,
+        'pictureId': pictureId,
+        'description': description,
+        'categories': categories.join(','),
+      };
 
   factory Restaurant.fromMap(Map<String, dynamic> m) {
     return Restaurant(
-      id: m['id'],
-      name: m['name'],
-      city: m['city'],
-      address: m['address'],
-      rating: (m['rating'] is num) ? (m['rating'] as num).toDouble() : double.tryParse(m['rating'].toString()) ?? 0.0,
-      pictureId: m['pictureId'] ?? '',
-      description: m['description'] ?? '',
-      categories: (m['categories'] ?? '').toString().split(',').where((s)=>s.isNotEmpty).toList(),
+      id: m['id']?.toString() ?? '',
+      name: m['name']?.toString() ?? '',
+      city: m['city']?.toString() ?? '',
+      address: m['address']?.toString() ?? '',
+      rating: (m['rating'] is num)
+          ? (m['rating'] as num).toDouble()
+          : double.tryParse(m['rating']?.toString() ?? '0') ?? 0.0,
+      pictureId: m['pictureId']?.toString() ?? '',
+      description: m['description']?.toString() ?? '',
+      categories: (m['categories']?.toString() ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList(),
       menus: null,
       customerReviews: null,
     );

@@ -1,4 +1,3 @@
-
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/restaurant.dart';
@@ -11,51 +10,89 @@ class DatabaseHelper {
 
   Future<Database> get db async {
     if (_db != null) return _db!;
-    await initDb();
+    _db = await _initDb();
     return _db!;
   }
 
-  Future<void> initDb() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'favorites.db');
+  Future<Database> _initDb() async {
+    final dbPath = join(await getDatabasesPath(), 'favorites.db');
 
-    _db = await openDatabase(path, version: 1, onCreate: _onCreate);
+  
+    final exists = await databaseExists(dbPath);
+    if (exists) {
+      final corrupted = await _isCorruptedDatabase(dbPath);
+      if (corrupted) {
+        print("Database lama rusak, dihapus otomatis!");
+        await deleteDatabase(dbPath);
+      }
+    }
+
+    return await openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE favorites(
+            id TEXT,
+            username TEXT,
+            name TEXT,
+            city TEXT,
+            address TEXT,
+            rating REAL,
+            pictureId TEXT,
+            description TEXT,
+            categories TEXT,
+            PRIMARY KEY(id, username)
+          )
+        ''');
+      },
+    );
   }
 
-  Future _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE favorites(
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        city TEXT,
-        address TEXT,
-        rating REAL,
-        pictureId TEXT,
-        description TEXT,
-        categories TEXT
-      )
-    ''');
+
+  Future<bool> _isCorruptedDatabase(String path) async {
+    try {
+      final testDB = await openDatabase(path);
+      final result = await testDB.rawQuery('SELECT username FROM favorites');
+      final invalidFound = result.any((r) =>
+          r['username'] == null || r['username'] == "" || r['username'] == "unknown");
+      await testDB.close();
+      return invalidFound;
+    } catch (e) {
+      return true; 
+    }
   }
 
-  Future<void> insertFavorite(Restaurant r) async {
+
+  Future<void> insertFavorite(Restaurant r, String username) async {
     final database = await db;
-    await database.insert('favorites', r.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    final data = r.toMap();
+    data['username'] = username;
+    await database.insert(
+      'favorites',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  Future<void> removeFavorite(String id) async {
+  
+  Future<void> removeFavorite(String id, String username) async {
     final database = await db;
-    await database.delete('favorites', where: 'id = ?', whereArgs: [id]);
+    await database.delete(
+      'favorites',
+      where: 'id = ? AND username = ?',
+      whereArgs: [id, username],
+    );
   }
 
-  Future<List<Restaurant>> getFavorites() async {
+ 
+  Future<List<Restaurant>> getFavorites(String username) async {
     final database = await db;
-    final maps = await database.query('favorites');
+    final maps = await database.query(
+      'favorites',
+      where: 'username = ?',
+      whereArgs: [username],
+    );
     return maps.map((m) => Restaurant.fromMap(m)).toList();
-  }
-
-  Future<bool> isFavorite(String id) async {
-    final database = await db;
-    final maps = await database.query('favorites', where: 'id = ?', whereArgs: [id]);
-    return maps.isNotEmpty;
   }
 }

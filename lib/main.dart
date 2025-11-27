@@ -5,15 +5,24 @@ import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/favorite_page.dart';
 import 'pages/register_page.dart';
-import 'db/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseHelper.instance.initDb();
-  runApp(MyApp());
+
+  final prefs = await SharedPreferences.getInstance();
+
+ 
+  final bool loggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+  runApp(MyApp(initialRoute: loggedIn ? '/home' : '/login'));
 }
 
 class MyApp extends StatelessWidget {
+  final String initialRoute;
+
+  const MyApp({super.key, required this.initialRoute});
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -21,7 +30,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Restaurant App',
         theme: ThemeData(primarySwatch: Colors.teal),
-        initialRoute: '/login',
+        initialRoute: initialRoute,
         routes: {
           '/login': (_) => LoginPage(),
           '/register': (_) => RegisterPage(),
